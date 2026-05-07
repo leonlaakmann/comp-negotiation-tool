@@ -268,6 +268,7 @@ h1 {
 .table-wrap { overflow-x: auto; margin-bottom: 16px; }
 table {
   width: 100%;
+  min-width: 680px;
   table-layout: fixed;
   border-collapse: collapse;
   font-size: 13px;
@@ -288,12 +289,14 @@ td {
   text-overflow: ellipsis;
 }
 tr:last-child td { border-bottom: none; }
-.col-pkg      { width: 22%; }
-.col-cash     { width: 19%; }
-.col-vsop     { width: 17%; }
-.col-benefits { width: 17%; }
-.col-total    { width: 17%; }
-.col-delta    { width: 8%; }
+.col-pkg      { width: 20%; }
+.col-cash     { width: 18%; }
+.col-vsop     { width: 16%; }
+.col-benefits { width: 15%; }
+.col-total    { width: 15%; }
+.col-delta    { width: 16%; }
+th.col-delta,
+td.col-delta  { text-align: right; overflow: visible; }
 td.bold       { font-weight: 700; }
 td.active-pkg { font-weight: 700; color: var(--green); }
 td.pos        { color: var(--success); font-weight: 600; }
@@ -626,7 +629,7 @@ function buildHTML() {
       <td>${fmt(c.vsopAnnual)}</td>
       <td>${fmt(c.benefits)}</td>
       <td class="bold">${fmt(c.total)}</td>
-      <td class="${delta === null ? '' : delta >= 0 ? 'pos' : 'neg'}">${delta === null ? '—' : fmtD(delta)}</td>
+      <td class="col-delta ${delta === null ? '' : delta >= 0 ? 'pos' : 'neg'}">${delta === null ? '—' : fmtD(delta)}</td>
     </tr>`;
   });
   h += `</tbody></table></div>`;
