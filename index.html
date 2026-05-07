@@ -360,9 +360,70 @@ td.neg        { color: var(--danger); font-weight: 600; }
   border-top: 1px solid var(--border);
   padding-top: 14px;
 }
+
+/* ── Share overlay ── */
+.share-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+}
+.share-modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px 28px 24px;
+  width: min(480px, calc(100vw - 40px));
+  display: flex; flex-direction: column; gap: 16px;
+}
+.share-modal h2 {
+  font-family: 'Instrument Serif', serif;
+  font-size: 20px; font-weight: 400;
+  color: var(--text-1);
+}
+.share-modal p {
+  font-size: 13px; color: var(--text-2); line-height: 1.6;
+}
+.share-url-row {
+  display: flex; gap: 8px; align-items: stretch;
+}
+.share-url-row input {
+  flex: 1; background: var(--bg-input);
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 8px 10px; color: var(--text-1);
+  font-size: 12px; font-family: monospace;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.share-copy-btn {
+  background: var(--green); color: #fff;
+  border: none; border-radius: 6px;
+  padding: 8px 14px; cursor: pointer;
+  font-size: 13px; font-family: inherit; white-space: nowrap;
+}
+.share-copy-btn:hover { opacity: 0.88; }
+.share-close-btn {
+  align-self: flex-end;
+  background: none; border: 1px solid var(--border);
+  border-radius: 6px; padding: 7px 16px;
+  color: var(--text-2); cursor: pointer;
+  font-size: 13px; font-family: inherit;
+}
+.share-close-btn:hover { background: rgba(255,255,255,0.04); }
 </style>
 </head>
 <body>
+
+<div id="share-overlay" class="share-backdrop" style="display:none;" onclick="if(event.target===this)closeShare()">
+  <div class="share-modal">
+    <h2>Share this comparison</h2>
+    <p>Your packages, settings, and view are encoded in the link below. Paste it anywhere — no account needed.</p>
+    <div class="share-url-row">
+      <input id="share-url-input" type="text" readonly onclick="this.select()">
+      <button class="share-copy-btn" id="share-copy-btn" onclick="copyShareUrl()">Copy link</button>
+    </div>
+    <button class="share-close-btn" onclick="closeShare()">Close</button>
+  </div>
+</div>
 
 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
   <h1 style="margin-bottom:0;">Compensation Negotiation</h1>
@@ -777,15 +838,22 @@ function share() {
   const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
   const url = location.origin + location.pathname + '?d=' + encoded;
   history.replaceState(null, '', url);
+  document.getElementById('share-url-input').value = url;
+  document.getElementById('share-overlay').style.display = 'flex';
+  navigator.clipboard.writeText(url).catch(() => {});
+}
+
+function copyShareUrl() {
+  const url = document.getElementById('share-url-input').value;
   navigator.clipboard.writeText(url).then(() => {
-    const btn = document.getElementById('share-btn');
-    btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copied ✓`;
-    btn.style.color = 'var(--success)';
-    setTimeout(() => {
-      btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg> Share`;
-      btn.style.color = '';
-    }, 2000);
+    const btn = document.getElementById('share-copy-btn');
+    btn.textContent = 'Copied ✓';
+    setTimeout(() => { btn.textContent = 'Copy link'; }, 2000);
   });
+}
+
+function closeShare() {
+  document.getElementById('share-overlay').style.display = 'none';
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
