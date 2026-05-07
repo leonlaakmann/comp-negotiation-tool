@@ -369,6 +369,7 @@ td.neg        { color: var(--danger); font-weight: 600; }
   z-index: 100;
 }
 .share-modal {
+  position: relative;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -415,13 +416,13 @@ td.neg        { color: var(--danger); font-weight: 600; }
 
 <div id="share-overlay" class="share-backdrop" style="display:none;" onclick="if(event.target===this)closeShare()">
   <div class="share-modal">
+    <button onclick="closeShare()" style="position:absolute;top:14px;right:16px;background:none;border:none;cursor:pointer;color:var(--text-2);font-size:18px;line-height:1;padding:4px;">✕</button>
     <h2>Share this comparison</h2>
     <p>Your packages, settings, and view are encoded in the link below. Paste it anywhere — no account needed.</p>
     <div class="share-url-row">
       <input id="share-url-input" type="text" readonly onclick="this.select()">
       <button class="share-copy-btn" id="share-copy-btn" onclick="copyShareUrl()">Copy link</button>
     </div>
-    <button class="share-close-btn" onclick="closeShare()">Close</button>
   </div>
 </div>
 
