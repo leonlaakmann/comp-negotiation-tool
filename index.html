@@ -123,7 +123,8 @@ h1 {
   gap: 6px;
   cursor: pointer;
 }
-.tax-bar select {
+.tax-bar select,
+.tax-bar input[type="number"] {
   background: var(--bg-input);
   border: 1px solid var(--border);
   color: var(--text-1);
@@ -132,6 +133,7 @@ h1 {
   font-size: 13px;
   font-family: inherit;
 }
+.tax-bar input[type="number"] { width: 54px; text-align: right; }
 
 /* ── Cards ── */
 .card-grid {
@@ -368,7 +370,13 @@ td.neg        { color: var(--danger); font-weight: 600; }
 const state = {
   selected: 0,
   view: 'gross',
-  netOpts: { sk: 1, kirche: false, childless: false },
+  netOpts: {
+    sk:         1,
+    kirche:     false,
+    age:        30,
+    bundesland: 'NW',
+    kvZusatz:   2.45   // total Zusatzbeitrag %; employee pays half
+  },
   packages: [{
     label:      'Current',
     base:       90000,
@@ -394,22 +402,33 @@ function taxF(zvE) {
   return 0.45 * zvE - 18936.88;
 }
 
+// 2026 Beitragsbemessungsgrenzen
+const BBG_RV   = 101400;
+const BBG_KVPV = 69750;
+
+// Kirchensteuer rate by Bundesland (BY + BW = 8%, all others = 9%)
+const KIST_RATE = { BY: 0.08, BW: 0.08 };
+function kistRate(bl) { return KIST_RATE[bl] ?? 0.09; }
+
 function netOf(gross, opts) {
-  if (gross <= 0) return { net: 0, sozial: 0, lohnsteuer: 0, soli: 0, ki: 0, rate: 0 };
-  const { sk, kirche, childless } = opts;
-  const rv  = Math.min(gross, 90600)  * 0.093;
-  const alv = Math.min(gross, 90600)  * 0.013;
-  const kv  = Math.min(gross, 66150)  * 0.0815;
-  const pv  = Math.min(gross, 66150)  * (childless ? 0.023 : 0.017);
+  if (gross <= 0) return { net: 0, sozial: 0, rv: 0, alv: 0, kv: 0, pv: 0, lohnsteuer: 0, soli: 0, ki: 0, rate: 0 };
+  const { sk, kirche, age, bundesland, kvZusatz } = opts;
+  const childless = age >= 23;
+  const rv  = Math.min(gross, BBG_RV)   * 0.093;
+  const alv = Math.min(gross, BBG_RV)   * 0.013;
+  const kvRate = 0.073 + (kvZusatz / 2) / 100;   // employee pays half of Zusatzbeitrag
+  const kv  = Math.min(gross, BBG_KVPV) * kvRate;
+  const pvRate = childless ? 0.024 : 0.018;       // 2026: childless 23+ = 2.4%, else 1.8%
+  const pv  = Math.min(gross, BBG_KVPV) * pvRate;
   const sozial = rv + alv + kv + pv;
   const zvE = Math.max(0, gross - 1230 - 36 - rv - kv - pv);
   const lohnsteuer = sk === 3 ? 0.5 * taxF(2 * zvE) : taxF(zvE);
   let soli = 0;
-  if (lohnsteuer > 18130)      soli = lohnsteuer * 0.055;
-  else if (lohnsteuer > 16956) soli = (lohnsteuer - 16956) * 0.119;
-  const ki  = kirche ? lohnsteuer * 0.09 : 0;
+  if (lohnsteuer > 37838)      soli = lohnsteuer * 0.055;
+  else if (lohnsteuer > 20350) soli = (lohnsteuer - 20350) * 0.119;
+  const ki  = kirche ? lohnsteuer * kistRate(bundesland) : 0;
   const net = gross - sozial - lohnsteuer - soli - ki;
-  return { net, sozial, lohnsteuer, soli, ki, rate: (1 - net / gross) * 100 };
+  return { net, sozial, rv, alv, kv, pv, lohnsteuer, soli, ki, rate: (1 - net / gross) * 100 };
 }
 
 function findGross(targetNet, bonusPct, opts) {
@@ -523,6 +542,14 @@ function buildHTML() {
 
   // ── Tax settings bar ──
   if (view === 'net') {
+    const bundeslaender = [
+      ['BB','Brandenburg'],['BE','Berlin'],['BW','Baden-Württemberg'],
+      ['BY','Bayern'],['HB','Bremen'],['HE','Hessen'],['HH','Hamburg'],
+      ['MV','Mecklenburg-Vorpommern'],['NI','Niedersachsen'],
+      ['NW','Nordrhein-Westfalen'],['RP','Rheinland-Pfalz'],
+      ['SH','Schleswig-Holstein'],['SL','Saarland'],['SN','Sachsen'],
+      ['ST','Sachsen-Anhalt'],['TH','Thüringen']
+    ];
     h += `<div class="tax-bar">
       <label>Steuerklasse
         <select onchange="setNetOpt('sk', +this.value)">
@@ -530,8 +557,21 @@ function buildHTML() {
             `<option value="${v}"${netOpts.sk === v ? ' selected' : ''}>SK ${l}</option>`).join('')}
         </select>
       </label>
-      <label><input type="checkbox"${netOpts.kirche    ? ' checked' : ''} onchange="setNetOpt('kirche',    this.checked)"> Kirchensteuer</label>
-      <label><input type="checkbox"${netOpts.childless ? ' checked' : ''} onchange="setNetOpt('childless', this.checked)"> Kinderlosenzuschlag</label>
+      <label>Alter
+        <input type="number" value="${netOpts.age}" min="18" max="67"
+               onchange="setNetOpt('age', +this.value)">
+      </label>
+      <label>Bundesland
+        <select onchange="setNetOpt('bundesland', this.value)">
+          ${bundeslaender.map(([code, name]) =>
+            `<option value="${code}"${netOpts.bundesland === code ? ' selected' : ''}>${name}</option>`).join('')}
+        </select>
+      </label>
+      <label>KV-Zusatzbeitrag
+        <input type="number" value="${netOpts.kvZusatz}" min="0" max="10" step="0.05"
+               onchange="setNetOpt('kvZusatz', +this.value)"> %
+      </label>
+      <label><input type="checkbox"${netOpts.kirche ? ' checked' : ''} onchange="setNetOpt('kirche', this.checked)"> Kirchensteuer</label>
     </div>`;
   }
 
@@ -583,7 +623,7 @@ function buildHTML() {
   // Benefits card
   h += `<div class="card-full"><h3>Benefits</h3>
     <div class="benefits-grid">
-      <div class="field"><label>bAV (€/mo)</label>
+      <div class="field"><label>Sport/Wellness (€/mo)</label>
         <input type="number" value="${pkg.bav}"      onchange="upd(${selected},'bav',this.value)">
       </div>
       <div class="field"><label>Mobility (€/mo)</label>
@@ -667,7 +707,7 @@ function buildHTML() {
   </div>`;
 
   // Disclaimer
-  h += `<div class="disclaimer">Net calculation: German 2024/25 approximation (§32a EStG). Actual net may differ based on exact Vorsorgepauschale, individual deductions, and KV Zusatzbeitrag. VSOP figures are pre-tax. Verify with a Lohnrechner for binding figures.</div>`;
+  h += `<div class="disclaimer">Net calculation: German 2026 approximation (§32a EStG, BBG RV/ALV €101.400, BBG KV/PV €69.750). Kirchensteuer: 8% BY/BW, 9% all other Bundesländer. Childless surcharge (PV) applies from age 23. VSOP figures are pre-tax. Verify with a Lohnrechner for binding figures.</div>`;
 
   return h;
 }
