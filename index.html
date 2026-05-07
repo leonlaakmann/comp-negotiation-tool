@@ -371,11 +371,12 @@ const state = {
   selected: 0,
   view: 'gross',
   netOpts: {
-    sk:         1,
-    kirche:     false,
-    age:        30,
-    bundesland: 'NW',
-    kvZusatz:   2.45   // total Zusatzbeitrag %; employee pays half
+    sk:          1,
+    kirche:      false,
+    age:         30,
+    hasChildren: false,
+    bundesland:  'NW',
+    kvZusatz:    2.45   // total Zusatzbeitrag %; employee pays half
   },
   packages: [{
     label:      'Current',
@@ -413,7 +414,7 @@ function kistRate(bl) { return KIST_RATE[bl] ?? 0.09; }
 function netOf(gross, opts) {
   if (gross <= 0) return { net: 0, sozial: 0, rv: 0, alv: 0, kv: 0, pv: 0, lohnsteuer: 0, soli: 0, ki: 0, rate: 0 };
   const { sk, kirche, age, bundesland, kvZusatz } = opts;
-  const childless = age >= 23;
+  const childless = age >= 23 && !opts.hasChildren;
   const rv  = Math.min(gross, BBG_RV)   * 0.093;
   const alv = Math.min(gross, BBG_RV)   * 0.013;
   const kvRate = 0.073 + (kvZusatz / 2) / 100;   // employee pays half of Zusatzbeitrag
@@ -571,6 +572,7 @@ function buildHTML() {
         <input type="number" value="${netOpts.kvZusatz}" min="0" max="10" step="0.05"
                onchange="setNetOpt('kvZusatz', +this.value)"> %
       </label>
+      <label><input type="checkbox"${netOpts.hasChildren ? ' checked' : ''} onchange="setNetOpt('hasChildren', this.checked)"> Kinder</label>
       <label><input type="checkbox"${netOpts.kirche ? ' checked' : ''} onchange="setNetOpt('kirche', this.checked)"> Kirchensteuer</label>
     </div>`;
   }
