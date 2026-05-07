@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compensation Negotiation</title>
+<style>
+:root {
+  --bg-page:   #0f1117;
+  --bg-card:   #1a1d27;
+  --bg-input:  #0f1117;
+  --border:    rgba(255,255,255,0.08);
+  --text-1:    #e8eaf0;
+  --text-2:    rgba(232,234,240,0.55);
+  --text-3:    rgba(232,234,240,0.35);
+  --green:     #1D9E75;
+  --purple:    #7F77DD;
+  --amber:     #BA7517;
+  --success:   #5DCAA5;
+  --danger:    #e24b4a;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg-page);
+  color: var(--text-1);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  padding: 28px 20px 40px;
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+h1 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+/* ── Tab row ── */
+.tab-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+
+.tab {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-2);
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+}
+.tab.active {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+  font-weight: 600;
+}
+.tab:hover:not(.active) { border-color: rgba(255,255,255,0.2); color: var(--text-1); }
+
+.add-btn {
+  background: transparent;
+  border: 1px dashed rgba(255,255,255,0.25);
+  color: var(--text-2);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+}
+.add-btn:hover { border-color: var(--green); color: var(--green); }
+
+/* ── Gross / Net toggle ── */
+.view-toggle {
+  display: flex;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.view-toggle button {
+  background: transparent;
+  border: none;
+  color: var(--text-2);
+  padding: 6px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+}
+.view-toggle button.active {
+  background: rgba(255,255,255,0.1);
+  color: var(--text-1);
+  font-weight: 600;
+}
+
+/* ── Tax settings bar ── */
+.tax-bar {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.tax-bar label {
+  color: var(--text-2);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.tax-bar select {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+/* ── Cards ── */
+.card-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.card, .card-full {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+}
+.card-full { margin-bottom: 12px; }
+
+.card h3, .card-full h3 {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-2);
+  margin-bottom: 14px;
+}
+
+/* ── Fields ── */
+.field { margin-bottom: 10px; }
+.field:last-of-type { margin-bottom: 0; }
+.field label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-2);
+  margin-bottom: 4px;
+}
+.field input[type="number"],
+.field input[type="text"] {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 14px;
+  font-family: inherit;
+}
+.field input:focus { outline: none; border-color: rgba(255,255,255,0.25); }
+
+/* ── Benefits grid ── */
+.benefits-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+/* ── Net waterfall ── */
+.waterfall {
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  font-size: 13px;
+}
+.wf-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 3px 0;
+  color: var(--text-2);
+}
+.wf-row.gross  { color: var(--text-1); font-weight: 600; }
+.wf-row.deduct { color: var(--danger); }
+.wf-row.net    {
+  color: var(--success);
+  font-weight: 700;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+  padding-top: 6px;
+}
+.wf-row.rate   { color: var(--text-3); font-size: 11px; margin-top: 2px; }
+
+/* ── Stat rows (VSOP, benefits total) ── */
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-2);
+}
+.stat-row span:last-child { color: var(--text-1); font-weight: 600; }
+
+/* ── Package meta row ── */
+.meta-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.meta-row input {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  min-width: 140px;
+}
+.meta-row input:focus { outline: none; border-color: rgba(255,255,255,0.25); }
+
+.remove-btn {
+  background: transparent;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: inherit;
+}
+.remove-btn:hover { background: rgba(226,75,74,0.1); }
+
+.total-summary {
+  margin-left: auto;
+  text-align: right;
+}
+.total-summary .label { font-size: 12px; color: var(--text-2); margin-bottom: 2px; }
+.total-summary .amount { font-size: 22px; font-weight: 700; color: var(--text-1); }
+
+/* ── Comparison table ── */
+.table-wrap { overflow-x: auto; margin-bottom: 16px; }
+table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+th {
+  color: var(--text-2);
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 500;
+  white-space: nowrap;
+}
+td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+tr:last-child td { border-bottom: none; }
+.col-pkg      { width: 22%; }
+.col-cash     { width: 19%; }
+.col-vsop     { width: 17%; }
+.col-benefits { width: 17%; }
+.col-total    { width: 17%; }
+.col-delta    { width: 8%; }
+td.bold       { font-weight: 700; }
+td.active-pkg { font-weight: 700; color: var(--green); }
+td.pos        { color: var(--success); font-weight: 600; }
+td.neg        { color: var(--danger); font-weight: 600; }
+
+/* ── Negotiation gap ── */
+.gap-block {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+.gap-block h3 {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-2);
+  margin-bottom: 10px;
+}
+.gap-line { padding: 4px 0; color: var(--text-1); line-height: 1.5; }
+.gap-line.above { color: var(--success); }
+
+/* ── Chart ── */
+.chart-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+.chart-legend {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.chart-wrap { position: relative; }
+
+/* ── Disclaimer ── */
+.disclaimer {
+  font-size: 11px;
+  color: var(--text-3);
+  line-height: 1.6;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+</style>
+</head>
+<body>
+
+<h1>Compensation Negotiation</h1>
+<div id="app"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+
+const state = {
+  selected: 0,
+  view: 'gross',
+  netOpts: { sk: 1, kirche: false, childless: false },
+  packages: [{
+    label:      'Current',
+    base:       90000,
+    bonusPct:   10,
+    vsopOpts:   0,
+    vsopStrike: 0,
+    vsopFMV:    0,
+    vsopYears:  4,
+    bav:        50,
+    mobility:   100,
+    home:       50,
+    other:      0
+  }]
+};
+
+// ─── Tax engine ──────────────────────────────────────────────────────────────
+
+function taxF(zvE) {
+  if (zvE <= 11604) return 0;
+  if (zvE <= 17005) { const y = (zvE - 11604) / 10000; return (979.18 * y + 1400) * y; }
+  if (zvE <= 66760) { const w = (zvE - 17005) / 10000; return (192.59 * w + 2397) * w + 966.53; }
+  if (zvE <= 277825) return 0.42 * zvE - 10602.13;
+  return 0.45 * zvE - 18936.88;
+}
+
+function netOf(gross, opts) {
+  if (gross <= 0) return { net: 0, sozial: 0, lohnsteuer: 0, soli: 0, ki: 0, rate: 0 };
+  const { sk, kirche, childless } = opts;
+  const rv  = Math.min(gross, 90600)  * 0.093;
+  const alv = Math.min(gross, 90600)  * 0.013;
+  const kv  = Math.min(gross, 66150)  * 0.0815;
+  const pv  = Math.min(gross, 66150)  * (childless ? 0.023 : 0.017);
+  const sozial = rv + alv + kv + pv;
+  const zvE = Math.max(0, gross - 1230 - 36 - rv - kv - pv);
+  const lohnsteuer = sk === 3 ? 0.5 * taxF(2 * zvE) : taxF(zvE);
+  let soli = 0;
+  if (lohnsteuer > 18130)      soli = lohnsteuer * 0.055;
+  else if (lohnsteuer > 16956) soli = (lohnsteuer - 16956) * 0.119;
+  const ki  = kirche ? lohnsteuer * 0.09 : 0;
+  const net = gross - sozial - lohnsteuer - soli - ki;
+  return { net, sozial, lohnsteuer, soli, ki, rate: (1 - net / gross) * 100 };
+}
+
+function findGross(targetNet, bonusPct, opts) {
+  let lo = 0, hi = 600000;
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2;
+    if (netOf(mid * (1 + bonusPct / 100), opts).net < targetNet) lo = mid;
+    else hi = mid;
+  }
+  return Math.round((lo + hi) / 2);
+}
+
+// ─── Computed values ─────────────────────────────────────────────────────────
+
+function compute(pkg) {
+  const totalGross = pkg.base * (1 + pkg.bonusPct / 100);
+  const breakdown  = netOf(totalGross, state.netOpts);
+  const cash       = state.view === 'net' ? breakdown.net : totalGross;
+  const vsopUpside = Math.max(0, (pkg.vsopFMV - pkg.vsopStrike) * pkg.vsopOpts);
+  const vsopAnnual = pkg.vsopYears > 0 ? vsopUpside / pkg.vsopYears : 0;
+  const benefits   = (pkg.bav + pkg.mobility + pkg.home + pkg.other) * 12;
+  const total      = cash + vsopAnnual + benefits;
+  return { totalGross, cash, breakdown, vsopUpside, vsopAnnual, benefits, total };
+}
+
+// ─── Formatters ──────────────────────────────────────────────────────────────
+
+const fmt  = n => '€ ' + Math.round(n).toLocaleString('de-DE');
+const fmtD = n => (n >= 0 ? '+' : '') + fmt(n);
+const fmtR = r => r.toFixed(1) + '%';
+
+// ─── Chart ───────────────────────────────────────────────────────────────────
+
+let chartInst = null;
+
+function renderChart() {
+  try { if (chartInst) chartInst.destroy(); } catch (e) {}
+  chartInst = null;
+  const canvas = document.getElementById('compChart');
+  if (!canvas) return;
+  const allCV = state.packages.map(compute);
+  const h = Math.max(90, state.packages.length * 52 + 30);
+  canvas.parentElement.style.height = h + 'px';
+  canvas.style.height = h + 'px';
+  chartInst = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels: state.packages.map(p => p.label),
+      datasets: [
+        { label: 'Cash',     data: allCV.map(cv => cv.cash),       backgroundColor: '#1D9E75' },
+        { label: 'VSOP/yr',  data: allCV.map(cv => cv.vsopAnnual), backgroundColor: '#7F77DD' },
+        { label: 'Benefits', data: allCV.map(cv => cv.benefits),   backgroundColor: '#BA7517' }
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.raw)}` } }
+      },
+      scales: {
+        x: {
+          stacked: true,
+          grid:   { color: 'rgba(255,255,255,0.05)' },
+          border: { color: 'rgba(255,255,255,0.08)' },
+          ticks:  { color: 'rgba(232,234,240,0.55)', callback: v => '€' + (v / 1000).toFixed(0) + 'k' }
+        },
+        y: {
+          stacked: true,
+          grid:   { display: false },
+          border: { display: false },
+          ticks:  { color: 'rgba(232,234,240,0.7)' }
+        }
+      }
+    }
+  });
+}
+
+// ─── Render ──────────────────────────────────────────────────────────────────
+
+function render() {
+  document.getElementById('app').innerHTML = buildHTML();
+  renderChart();
+}
+
+function buildHTML() {
+  const { packages, selected, view, netOpts } = state;
+  const pkg      = packages[selected];
+  const cv       = compute(pkg);
+  const allCV    = packages.map(compute);
+  const currCV   = allCV[0];
+  let   h        = '';
+
+  // ── Tab bar ──
+  h += `<div class="tab-row">
+    <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
+      <div class="tabs">`;
+  packages.forEach((p, i) => {
+    h += `<button class="tab${i === selected ? ' active' : ''}" onclick="selectTab(${i})">${esc(p.label)}</button>`;
+  });
+  h += `</div>`;
+  if (packages.length < 4) h += `<button class="add-btn" onclick="addOffer()">+ Add offer</button>`;
+  h += `</div>
+    <div class="view-toggle">
+      <button class="${view === 'gross' ? 'active' : ''}" onclick="setView('gross')">Gross</button>
+      <button class="${view === 'net'   ? 'active' : ''}" onclick="setView('net')">Net</button>
+    </div>
+  </div>`;
+
+  // ── Tax settings bar ──
+  if (view === 'net') {
+    h += `<div class="tax-bar">
+      <label>Steuerklasse
+        <select onchange="setNetOpt('sk', +this.value)">
+          ${[[1,'I'],[3,'III'],[4,'IV']].map(([v,l]) =>
+            `<option value="${v}"${netOpts.sk === v ? ' selected' : ''}>SK ${l}</option>`).join('')}
+        </select>
+      </label>
+      <label><input type="checkbox"${netOpts.kirche    ? ' checked' : ''} onchange="setNetOpt('kirche',    this.checked)"> Kirchensteuer</label>
+      <label><input type="checkbox"${netOpts.childless ? ' checked' : ''} onchange="setNetOpt('childless', this.checked)"> Kinderlosenzuschlag</label>
+    </div>`;
+  }
+
+  // ── Card grid ──
+  h += `<div class="card-grid">`;
+
+  // Cash card
+  h += `<div class="card"><h3>Cash</h3>
+    <div class="field"><label>Base salary (gross €/yr)</label>
+      <input type="number" value="${pkg.base}"     onchange="upd(${selected},'base',this.value)">
+    </div>
+    <div class="field"><label>Bonus (%)</label>
+      <input type="number" value="${pkg.bonusPct}" onchange="upd(${selected},'bonusPct',this.value)">
+    </div>`;
+  if (view === 'net') {
+    const bd = cv.breakdown;
+    h += `<div class="waterfall">
+      <div class="wf-row gross"><span>Gross cash (base + bonus)</span><span>${fmt(cv.totalGross)}</span></div>
+      <div class="wf-row deduct"><span>− Social contributions</span><span>−${fmt(bd.sozial)}</span></div>
+      <div class="wf-row deduct"><span>− Income tax (Lohnsteuer)</span><span>−${fmt(bd.lohnsteuer)}</span></div>
+      <div class="wf-row deduct"><span>− Solidarity surcharge</span><span>−${fmt(bd.soli)}</span></div>
+      ${bd.ki > 0 ? `<div class="wf-row deduct"><span>− Kirchensteuer</span><span>−${fmt(bd.ki)}</span></div>` : ''}
+      <div class="wf-row net"><span>Net cash</span><span>${fmt(bd.net)}</span></div>
+      <div class="wf-row rate"><span>Effective deduction rate: ${fmtR(bd.rate)}</span></div>
+    </div>`;
+  }
+  h += `</div>`;
+
+  // VSOP card
+  h += `<div class="card"><h3>VSOP / Equity</h3>
+    <div class="field"><label>Options / virtual shares</label>
+      <input type="number" value="${pkg.vsopOpts}"    onchange="upd(${selected},'vsopOpts',this.value)">
+    </div>
+    <div class="field"><label>Strike price (€ / share)</label>
+      <input type="number" value="${pkg.vsopStrike}"  onchange="upd(${selected},'vsopStrike',this.value)">
+    </div>
+    <div class="field"><label>Fair value per share (€)</label>
+      <input type="number" value="${pkg.vsopFMV}"     onchange="upd(${selected},'vsopFMV',this.value)">
+    </div>
+    <div class="field"><label>Vesting period (years)</label>
+      <input type="number" value="${pkg.vsopYears}"   onchange="upd(${selected},'vsopYears',this.value)">
+    </div>
+    <div class="stat-row"><span>Paper value</span><span>${fmt(cv.vsopUpside)}</span></div>
+    <div class="stat-row"><span>Annual equivalent</span><span>${fmt(cv.vsopAnnual)} / yr</span></div>
+  </div>`;
+
+  h += `</div>`; // end card-grid
+
+  // Benefits card
+  h += `<div class="card-full"><h3>Benefits</h3>
+    <div class="benefits-grid">
+      <div class="field"><label>bAV (€/mo)</label>
+        <input type="number" value="${pkg.bav}"      onchange="upd(${selected},'bav',this.value)">
+      </div>
+      <div class="field"><label>Mobility (€/mo)</label>
+        <input type="number" value="${pkg.mobility}" onchange="upd(${selected},'mobility',this.value)">
+      </div>
+      <div class="field"><label>Home office (€/mo)</label>
+        <input type="number" value="${pkg.home}"     onchange="upd(${selected},'home',this.value)">
+      </div>
+      <div class="field"><label>Other (€/mo)</label>
+        <input type="number" value="${pkg.other}"    onchange="upd(${selected},'other',this.value)">
+      </div>
+    </div>
+    <div class="stat-row"><span>Annual total</span><span>${fmt(cv.benefits)}</span></div>
+  </div>`;
+
+  // Package meta row
+  h += `<div class="meta-row">
+    <input type="text" value="${esc(pkg.label)}" onchange="updLabel(${selected},this.value)">
+    ${selected > 0 ? `<button class="remove-btn" onclick="removeOffer(${selected})">Remove</button>` : ''}
+    <div class="total-summary">
+      <div class="label">Total ${view} comp</div>
+      <div class="amount">${fmt(cv.total)}</div>
+    </div>
+  </div>`;
+
+  // Comparison table
+  h += `<div class="table-wrap"><table>
+    <thead><tr>
+      <th class="col-pkg">Package</th>
+      <th class="col-cash">${view === 'net' ? 'Net cash' : 'Cash'}</th>
+      <th class="col-vsop">VSOP/yr</th>
+      <th class="col-benefits">Benefits</th>
+      <th class="col-total">Total</th>
+      <th class="col-delta">Δ</th>
+    </tr></thead>
+    <tbody>`;
+  packages.forEach((p, i) => {
+    const c = allCV[i];
+    const delta = i === 0 ? null : c.total - currCV.total;
+    h += `<tr>
+      <td class="${i === selected ? 'active-pkg' : 'bold'}">${esc(p.label)}</td>
+      <td>${fmt(c.cash)}</td>
+      <td>${fmt(c.vsopAnnual)}</td>
+      <td>${fmt(c.benefits)}</td>
+      <td class="bold">${fmt(c.total)}</td>
+      <td class="${delta === null ? '' : delta >= 0 ? 'pos' : 'neg'}">${delta === null ? '—' : fmtD(delta)}</td>
+    </tr>`;
+  });
+  h += `</tbody></table></div>`;
+
+  // Negotiation gap
+  const offers = packages.slice(1);
+  if (offers.length > 0) {
+    h += `<div class="gap-block"><h3>Negotiation Gap</h3>`;
+    offers.forEach((offer, i) => {
+      const oi  = i + 1;
+      const oCV = allCV[oi];
+      const delta = oCV.total - currCV.total;
+      if (delta >= 0) {
+        h += `<div class="gap-line above">✓ ${esc(offer.label)} already exceeds current by ${fmt(delta)}</div>`;
+      } else if (view === 'gross') {
+        const reqBase = (currCV.total - oCV.vsopAnnual - oCV.benefits) / (1 + offer.bonusPct / 100);
+        h += `<div class="gap-line">${esc(offer.label)}: base needs ${fmtD(reqBase - offer.base)} (→ ${fmt(reqBase)}) to match</div>`;
+      } else {
+        const targetNet  = currCV.total - oCV.vsopAnnual - oCV.benefits;
+        const grossNeeded = findGross(targetNet, offer.bonusPct, netOpts);
+        h += `<div class="gap-line">${esc(offer.label)}: needs gross base ${fmtD(grossNeeded - offer.base)} (→ ${fmt(grossNeeded)} gross) to match in net terms</div>`;
+      }
+    });
+    h += `</div>`;
+  }
+
+  // Chart
+  h += `<div class="chart-section">
+    <div class="chart-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#1D9E75"></div>Cash</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#7F77DD"></div>VSOP/yr</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#BA7517"></div>Benefits</div>
+    </div>
+    <div class="chart-wrap"><canvas id="compChart"></canvas></div>
+  </div>`;
+
+  // Disclaimer
+  h += `<div class="disclaimer">Net calculation: German 2024/25 approximation (§32a EStG). Actual net may differ based on exact Vorsorgepauschale, individual deductions, and KV Zusatzbeitrag. VSOP figures are pre-tax. Verify with a Lohnrechner for binding figures.</div>`;
+
+  return h;
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── Event handlers ───────────────────────────────────────────────────────────
+
+function selectTab(i)          { state.selected = i; render(); }
+function setView(v)            { state.view = v; render(); }
+function setNetOpt(k, v)       { state.netOpts[k] = v; render(); }
+function upd(i, k, v)          { state.packages[i][k] = parseFloat(v) || 0; render(); }
+function updLabel(i, v)        { state.packages[i].label = v; render(); }
+
+function addOffer() {
+  if (state.packages.length >= 4) return;
+  const labels = ['Current','Offer 1','Offer 2','Offer 3'];
+  const idx = state.packages.length;
+  state.packages.push({
+    label: labels[idx], base: 0, bonusPct: 0,
+    vsopOpts: 0, vsopStrike: 0, vsopFMV: 0, vsopYears: 4,
+    bav: 0, mobility: 0, home: 0, other: 0
+  });
+  state.selected = idx;
+  render();
+}
+
+function removeOffer(i) {
+  if (i === 0) return;
+  state.packages.splice(i, 1);
+  state.selected = Math.min(state.selected, state.packages.length - 1);
+  render();
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+
+render();
+</script>
+</body>
+</html>
