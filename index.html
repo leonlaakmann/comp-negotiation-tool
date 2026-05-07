@@ -364,7 +364,13 @@ td.neg        { color: var(--danger); font-weight: 600; }
 </head>
 <body>
 
-<h1>Compensation Negotiation</h1>
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+  <h1 style="margin-bottom:0;">Compensation Negotiation</h1>
+  <button id="share-btn" onclick="share()" style="background:none;border:none;cursor:pointer;padding:4px;color:var(--danger);display:flex;align-items:center;gap:6px;font-family:inherit;font-size:13px;color:var(--text-2);">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg>
+    Share
+  </button>
+</div>
 <div id="app"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -764,7 +770,38 @@ function removeOffer(i) {
   render();
 }
 
+// ─── Share ────────────────────────────────────────────────────────────────────
+
+function share() {
+  const payload = { packages: state.packages, view: state.view, netOpts: state.netOpts, period: state.period };
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+  const url = location.origin + location.pathname + '?d=' + encoded;
+  history.replaceState(null, '', url);
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById('share-btn');
+    btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copied ✓`;
+    btn.style.color = 'var(--success)';
+    setTimeout(() => {
+      btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg> Share`;
+      btn.style.color = '';
+    }, 2000);
+  });
+}
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
+
+(function () {
+  try {
+    const param = new URLSearchParams(location.search).get('d');
+    if (param) {
+      const parsed = JSON.parse(decodeURIComponent(escape(atob(param))));
+      if (parsed.packages) state.packages = parsed.packages;
+      if (parsed.view)     state.view     = parsed.view;
+      if (parsed.netOpts)  state.netOpts  = { ...state.netOpts, ...parsed.netOpts };
+      if (parsed.period)   state.period   = parsed.period;
+    }
+  } catch (e) { /* ignore corrupt param */ }
+})();
 
 render();
 </script>
