@@ -597,7 +597,7 @@ function buildHTML() {
       <div class="wf-row deduct"><span>− Solidarity surcharge</span><span>−${fmt(bd.soli)}</span></div>
       ${bd.ki > 0 ? `<div class="wf-row deduct"><span>− Kirchensteuer</span><span>−${fmt(bd.ki)}</span></div>` : ''}
       <div class="wf-row net"><span>Net cash</span><span>${fmt(bd.net)}</span></div>
-      <div class="wf-row rate"><span>Effective deduction rate: ${fmtR(bd.rate)}</span></div>
+      <div class="wf-row rate"><span>${fmt(bd.net / 12)} / month · Effective deduction rate: ${fmtR(bd.rate)}</span></div>
     </div>`;
   }
   h += `</div>`;
