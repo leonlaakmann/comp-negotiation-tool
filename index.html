@@ -370,6 +370,7 @@ td.neg        { color: var(--danger); font-weight: 600; }
 const state = {
   selected: 0,
   view: 'gross',
+  period: 'yearly',   // 'yearly' | 'monthly'
   netOpts: {
     sk:          1,
     kirche:      false,
@@ -460,6 +461,8 @@ function compute(pkg) {
 const fmt  = n => '€ ' + Math.round(n).toLocaleString('de-DE');
 const fmtD = n => (n >= 0 ? '+' : '') + fmt(n);
 const fmtR = r => r.toFixed(1) + '%';
+const pFmt  = n => fmt(state.period === 'monthly' ? n / 12 : n);
+const pFmtD = n => fmtD(state.period === 'monthly' ? n / 12 : n);
 
 // ─── Chart ───────────────────────────────────────────────────────────────────
 
@@ -479,9 +482,9 @@ function renderChart() {
     data: {
       labels: state.packages.map(p => p.label),
       datasets: [
-        { label: 'Cash',     data: allCV.map(cv => cv.cash),       backgroundColor: '#1D9E75' },
-        { label: 'VSOP/yr',  data: allCV.map(cv => cv.vsopAnnual), backgroundColor: '#7F77DD' },
-        { label: 'Benefits', data: allCV.map(cv => cv.benefits),   backgroundColor: '#BA7517' }
+        { label: 'Cash',     data: allCV.map(cv => cv.cash       / (state.period === 'monthly' ? 12 : 1)), backgroundColor: '#1D9E75' },
+        { label: 'VSOP/yr',  data: allCV.map(cv => cv.vsopAnnual / (state.period === 'monthly' ? 12 : 1)), backgroundColor: '#7F77DD' },
+        { label: 'Benefits', data: allCV.map(cv => cv.benefits    / (state.period === 'monthly' ? 12 : 1)), backgroundColor: '#BA7517' }
       ]
     },
     options: {
@@ -647,16 +650,24 @@ function buildHTML() {
     ${selected > 0 ? `<button class="remove-btn" onclick="removeOffer(${selected})">Remove</button>` : ''}
     <div class="total-summary">
       <div class="label">Total ${view} comp</div>
-      <div class="amount">${fmt(cv.total)}</div>
+      <div class="amount">${pFmt(cv.total)}${state.period === 'monthly' ? '<span style="font-size:13px;font-weight:400;color:var(--text-2)">/mo</span>' : ''}</div>
     </div>
   </div>`;
 
   // Comparison table
+  const periodToggle = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+    <span style="font-size:12px;color:var(--text-2);text-transform:uppercase;letter-spacing:.06em;font-weight:600;">Comparison</span>
+    <div class="view-toggle">
+      <button class="${state.period==='yearly'?'active':''}" onclick="setPeriod('yearly')">Yearly</button>
+      <button class="${state.period==='monthly'?'active':''}" onclick="setPeriod('monthly')">Monthly</button>
+    </div>
+  </div>`;
+  h += periodToggle;
   h += `<div class="table-wrap"><table>
     <thead><tr>
       <th class="col-pkg">Package</th>
       <th class="col-cash">${view === 'net' ? 'Net cash' : 'Cash'}</th>
-      <th class="col-vsop">VSOP/yr</th>
+      <th class="col-vsop">${state.period==='monthly'?'VSOP/mo':'VSOP/yr'}</th>
       <th class="col-benefits">Benefits</th>
       <th class="col-total">Total</th>
       <th class="col-delta">Δ</th>
@@ -667,11 +678,11 @@ function buildHTML() {
     const delta = i === 0 ? null : c.total - currCV.total;
     h += `<tr>
       <td class="${i === selected ? 'active-pkg' : 'bold'}">${esc(p.label)}</td>
-      <td>${fmt(c.cash)}</td>
-      <td>${fmt(c.vsopAnnual)}</td>
-      <td>${fmt(c.benefits)}</td>
-      <td class="bold">${fmt(c.total)}</td>
-      <td class="col-delta ${delta === null ? '' : delta >= 0 ? 'pos' : 'neg'}">${delta === null ? '—' : fmtD(delta)}</td>
+      <td>${pFmt(c.cash)}</td>
+      <td>${pFmt(c.vsopAnnual)}</td>
+      <td>${pFmt(c.benefits)}</td>
+      <td class="bold">${pFmt(c.total)}</td>
+      <td class="col-delta ${delta === null ? '' : delta >= 0 ? 'pos' : 'neg'}">${delta === null ? '—' : pFmtD(delta)}</td>
     </tr>`;
   });
   h += `</tbody></table></div>`;
@@ -724,6 +735,7 @@ function esc(s) {
 
 function selectTab(i)          { state.selected = i; render(); }
 function setView(v)            { state.view = v; render(); }
+function setPeriod(p)          { state.period = p; render(); }
 function setNetOpt(k, v)       { state.netOpts[k] = v; render(); }
 function upd(i, k, v)          { state.packages[i][k] = parseFloat(v) || 0; render(); }
 function updLabel(i, v)        { state.packages[i].label = v; render(); }
