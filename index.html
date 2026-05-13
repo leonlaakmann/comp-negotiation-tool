@@ -715,7 +715,7 @@ function buildHTML() {
         <input type="number" value="${pkg.other}"    onchange="upd(${selected},'other',this.value)">
       </div>
       <div class="field"><label>Vacation days</label>
-        <input type="number" value="${pkg.vacationDays}" min="0" max="365" onchange="updInt(${selected},'vacationDays',this.value)">
+        <input type="number" value="${pkg.vacationDays}" min="0" max="365" onchange="updInt(${selected},'vacationDays',this.value,20)">
       </div>
     </div>
     <div class="stat-row"><span>Annual total</span><span>${fmt(cv.benefits)}</span></div>
@@ -821,7 +821,7 @@ function setView(v)            { state.view = v; render(); }
 function setPeriod(p)          { state.period = p; render(); }
 function setNetOpt(k, v)       { state.netOpts[k] = v; render(); }
 function upd(i, k, v)          { state.packages[i][k] = parseFloat(v) || 0; render(); }
-function updInt(i, k, v)       { state.packages[i][k] = parseInt(v) || 0; render(); }
+function updInt(i, k, v, def = 0) { state.packages[i][k] = parseInt(v) || def; render(); }
 function updLabel(i, v)        { state.packages[i].label = v; render(); }
 
 function addOffer() {
