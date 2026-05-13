@@ -296,11 +296,12 @@ td {
 }
 tr:last-child td { border-bottom: none; }
 .col-pkg      { width: 20%; }
-.col-cash     { width: 18%; }
-.col-vsop     { width: 16%; }
-.col-benefits { width: 15%; }
-.col-total    { width: 15%; }
-.col-delta    { width: 16%; }
+.col-cash     { width: 16%; }
+.col-vsop     { width: 14%; }
+.col-benefits { width: 13%; }
+.col-total    { width: 13%; }
+.col-days     { width: 10%; }
+.col-delta    { width: 14%; }
 th.col-delta,
 td.col-delta  { text-align: right; overflow: visible; }
 td.bold       { font-weight: 700; }
@@ -462,7 +463,8 @@ const state = {
     bav:        50,
     mobility:   100,
     home:       50,
-    other:      0
+    other:      0,
+    vacationDays: 20
   }]
 };
 
@@ -712,6 +714,9 @@ function buildHTML() {
       <div class="field"><label>Other (€/mo)</label>
         <input type="number" value="${pkg.other}"    onchange="upd(${selected},'other',this.value)">
       </div>
+      <div class="field"><label>Vacation days</label>
+        <input type="number" value="${pkg.vacationDays}" min="0" max="365" onchange="updInt(${selected},'vacationDays',this.value)">
+      </div>
     </div>
     <div class="stat-row"><span>Annual total</span><span>${fmt(cv.benefits)}</span></div>
   </div>`;
@@ -742,18 +747,22 @@ function buildHTML() {
       <th class="col-vsop">${state.period==='monthly'?'VSOP/mo':'VSOP/yr'}</th>
       <th class="col-benefits">Benefits</th>
       <th class="col-total">Total</th>
+      <th class="col-days">Days off</th>
       <th class="col-delta">Δ</th>
     </tr></thead>
     <tbody>`;
   packages.forEach((p, i) => {
     const c = allCV[i];
     const delta = i === 0 ? null : c.total - currCV.total;
+    const daysDelta = i === 0 ? null : (p.vacationDays || 0) - (packages[0].vacationDays || 0);
+    const daysStr = i === 0 ? '—' : (daysDelta >= 0 ? `<span class="pos">+${daysDelta}</span>` : `<span class="neg">${daysDelta}</span>`);
     h += `<tr>
       <td class="${i === selected ? 'active-pkg' : 'bold'}">${esc(p.label)}</td>
       <td>${pFmt(c.cash)}</td>
       <td>${pFmt(c.vsopAnnual)}</td>
       <td>${pFmt(c.benefits)}</td>
       <td class="bold">${pFmt(c.total)}</td>
+      <td class="col-days" style="text-align:center">${i === 0 ? (p.vacationDays || 0) + ' d' : (p.vacationDays || 0) + ' d ' + daysStr}</td>
       <td class="col-delta ${delta === null ? '' : delta >= 0 ? 'pos' : 'neg'}">${delta === null ? '—' : pFmtD(delta)}</td>
     </tr>`;
   });
@@ -767,15 +776,17 @@ function buildHTML() {
       const oi  = i + 1;
       const oCV = allCV[oi];
       const delta = oCV.total - currCV.total;
+      const daysDiff = (offer.vacationDays || 0) - (packages[0].vacationDays || 0);
+      const daysNote = daysDiff === 0 ? '' : ` · ${daysDiff > 0 ? '+' : ''}${daysDiff} vacation days`;
       if (delta >= 0) {
-        h += `<div class="gap-line above">✓ ${esc(offer.label)} already exceeds current by ${fmt(delta)}</div>`;
+        h += `<div class="gap-line above">✓ ${esc(offer.label)} already exceeds current by ${fmt(delta)}${daysNote}</div>`;
       } else if (view === 'gross') {
         const reqBase = (currCV.total - oCV.vsopAnnual - oCV.benefits) / (1 + offer.bonusPct / 100);
-        h += `<div class="gap-line">${esc(offer.label)}: base needs ${fmtD(reqBase - offer.base)} (→ ${fmt(reqBase)}) to match</div>`;
+        h += `<div class="gap-line">${esc(offer.label)}: base needs ${fmtD(reqBase - offer.base)} (→ ${fmt(reqBase)}) to match${daysNote}</div>`;
       } else {
         const targetNet  = currCV.total - oCV.vsopAnnual - oCV.benefits;
         const grossNeeded = findGross(targetNet, offer.bonusPct, netOpts);
-        h += `<div class="gap-line">${esc(offer.label)}: needs gross base ${fmtD(grossNeeded - offer.base)} (→ ${fmt(grossNeeded)} gross) to match in net terms</div>`;
+        h += `<div class="gap-line">${esc(offer.label)}: needs gross base ${fmtD(grossNeeded - offer.base)} (→ ${fmt(grossNeeded)} gross) to match in net terms${daysNote}</div>`;
       }
     });
     h += `</div>`;
@@ -810,6 +821,7 @@ function setView(v)            { state.view = v; render(); }
 function setPeriod(p)          { state.period = p; render(); }
 function setNetOpt(k, v)       { state.netOpts[k] = v; render(); }
 function upd(i, k, v)          { state.packages[i][k] = parseFloat(v) || 0; render(); }
+function updInt(i, k, v)       { state.packages[i][k] = parseInt(v) || 0; render(); }
 function updLabel(i, v)        { state.packages[i].label = v; render(); }
 
 function addOffer() {
@@ -819,7 +831,7 @@ function addOffer() {
   state.packages.push({
     label: labels[idx], base: 0, bonusPct: 0,
     vsopOpts: 0, vsopStrike: 0, vsopFMV: 0, vsopYears: 4,
-    bav: 0, mobility: 0, home: 0, other: 0
+    bav: 0, mobility: 0, home: 0, other: 0, vacationDays: 20
   });
   state.selected = idx;
   render();
