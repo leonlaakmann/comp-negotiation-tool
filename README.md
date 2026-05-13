@@ -1,0 +1,1 @@
+A single-page tool for evaluating and comparing compensation packages. Enter base salary, bonus, VSOP options, and benefits for your current role and up to three offers. Switches between gross and net view using a 2026 German tax engine (§32a EStG, Sozialabgaben, Soli, Kirchensteuer). Share any comparison via a self-contained URL — no backend, no login.
